@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Advanced 3D Excel Database & Chart Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+ <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+  // Your Firebase config; replace with your actual config:
+  const firebaseConfig = {
+   apiKey: "AIzaSyCcg0rYs05YHxEJ1JmqaC8eI_Z4e7pCh1w",
+  authDomain: "data-entry-e46f3.firebaseapp.com",
+  projectId: "data-entry-e46f3",
+  storageBucket: "data-entry-e46f3.firebasestorage.app",
+  messagingSenderId: "841836849980",
+  appId: "1:841836849980:web:d2f64c4692230a90164c39",
+  measurementId: "G-GX9TBLEJP2"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  // Initialize Firestore, make global so main.js can use it
+  const db = firebase.firestore();
+</script>
+<style>
+  :root {
+  --bg-main: #17202a;
+  --bg-panel: #202b38;
+  --bg-panel-dark: #161d24;
+  --neon-green: #24ff6d;
+  --neon-blue: #20b6ff;
+  --neon-yellow: #ffe156;
+  --neon-purple: #a259ff;
+  --neon-pink: #ff6fff;
+  --neon-orange: #ffae00;
+  --neon-red: #ff4f6d;
+  --white: #fff;
+  --text-dim: #b5c6e0;
+  --text-bright: #fff;
+  --border: #263241;
+  --border-bright: #26f7ff;
+  --radius: 14px;
+  --shadow-main: 0 8px 32px 0 #000c1d99, 0 1.5px 7px #40c3ff13;
+  --transition-fast: 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+  --transition: 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+html, body {
+  background: radial-gradient(circle at 60% 60%, #1b2735 60%, #141a23 100%);
+  color: var(--text-bright);
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0; padding: 0;
+  min-height: 100vh;
+}
+
+.container {
+  background: var(--bg-main);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-main);
+  max-width: 1250px;
+  margin: 38px auto 38px auto;
+  padding: 34px 30px 30px 30px;
+  transition: box-shadow var(--transition), background var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 1s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.97);}
+  to   { opacity: 1; transform: none;}
+}
+
+h2 {
+  margin: 0 0 12px 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-shadow: 0 2px 30px var(--neon-blue), 0 1px 0 #151e2b;
+  user-select: none;
+  transition: color var(--transition);
+}
+
+h2 button {
+  font-size: 1.05rem;
+  padding: 7px 15px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(90deg, var(--neon-red) 60%, var(--neon-orange) 100%);
+  color: var(--white);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 2px 10px #ff444422;
+}
+
+h2 button:hover {
+  background: linear-gradient(90deg, var(--neon-orange) 60%, var(--neon-red) 100%);
+  transform: scale(1.05);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab-button {
+  font-family: inherit;
+  font-size: 1em;
+  border: none;
+  background: var(--bg-panel-dark);
+  color: var(--text-bright);
+  border-radius: 10px 10px 0 0;
+  padding: 9px 26px 8px 20px;
+  margin-bottom: -8px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.01em;
+  position: relative;
+  top: 8px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0.5px 6px #00ffd94a;
+  border-bottom: 2px solid transparent;
+  transition: background var(--transition), color var(--transition), border-bottom var(--transition);
+}
+
+.tab-button.active {
+  background: linear-gradient(90deg, #1e2e3a 70%, #233046 100%);
+  color: var(--neon-blue);
+  border-bottom: 2.5px solid var(--neon-green);
+  z-index: 8;
+  top: 0;
+  text-shadow: 0 1px 4px var(--neon-blue);
+}
+
+.tab-button:not(.active):hover {
+  background: linear-gradient(90deg, #232d38 60%, #233046 100%);
+  color: var(--neon-green);
+}
+
+.tab-button button {
+  background-color: var(--neon-red);
+  border: none;
+  color: white;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px 9px;
+  font-size: 0.98em;
+  margin-left: 10px;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.tab-button button:hover {
+  background-color: var(--neon-yellow);
+  color: #232323;
+  transform: scale(1.07);
+}
+
+.input-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 13px;
+  flex-wrap: wrap;
+  user-select: none;
+  align-items: center;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  padding: 11px 12px 9px 12px;
+  box-shadow: 0 1px 10px #0a0a1a88;
+  transition: background var(--transition);
+  animation: fadeInPanel 0.7s;
+}
+
+@keyframes fadeInPanel {
+  from { opacity: 0; transform: translateY(20px);}
+  to { opacity: 1; transform: none;}
+}
+
+.input-row input,
+.input-row select {
+  border: 1.5px solid var(--border);
+  background: #202b38;
+  color: var(--white);
+  border-radius: 8px;
+  font-size: 1em;
+  outline: none;
+  flex: 1;
+  min-width: 110px;
+  padding: 7px 11px;
+  transition: box-shadow var(--transition), border var(--transition), background var(--transition), color var(--transition);
+  box-shadow: 0 0.5px 2px #00ffd933;
+  margin: 2px 0;
+  user-select: text;
+}
+
+.input-row input:focus,
+.input-row select:focus {
+  border-color: var(--neon-blue);
+  box-shadow: 0 1px 8px var(--neon-blue);
+  background: #28364a;
+  color: var(--neon-green);
+}
+
+.input-row select {
+  background: #232d3c;
+}
+
+.input-row button {
+  background: linear-gradient(90deg, var(--neon-blue) 70%, var(--neon-green) 110%);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  text-shadow: 0 1px 2px #00ffd933;
+  border: none;
+  font-size: 1.03em;
+  box-shadow: 0 1.5px 18px #00ffe21a;
+  letter-spacing: 0.01em;
+  padding: 9px 19px;
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 7px;
+  margin-top: 3px;
+  will-change: transform;
+  user-select: none;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.input-row button.btn-danger {
+  background: linear-gradient(90deg, var(--neon-red) 70%, var(--neon-orange) 110%);
+}
+
+.input-row button:active {
+  background: linear-gradient(90deg, #20b6ff 60%, var(--neon-green) 100%);
+  color: #fff;
+  transform: scale(0.96);
+  box-shadow: 0 0.8px 8px #00ffd944;
+}
+
+.input-row button:hover {
+  background: linear-gradient(90deg, #20b6ff 60%, #24ff6d 120%);
+  color: #fff;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 2.5px 24px #00ffd94b;
+}
+
+table {
+  background: var(--bg-panel);
+  border-radius: 10px;
+  box-shadow: 0 2px 24px #0a0a1a88;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  user-select: none;
+  margin-bottom: 0;
+  margin-top: 0;
+  animation: fadeInPanel 0.8s;
+}
+
+th,
+td {
+  font-size: 1em;
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #263241;
+  color: var(--text-bright);
+  user-select: text;
+  background: transparent;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+th {
+  background: linear-gradient(90deg, #263241 70%, #202b38 100%);
+  color: var(--neon-blue);
+  border-radius: 4px 4px 0 0;
+  border: none;
+  font-weight: 700;
+  transition: background var(--transition-fast);
+  position: relative;
+  user-select: none;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 8px #00ffd911;
+}
+
+th[contenteditable="true"]:focus {
+  background: var(--neon-blue) !important;
+  color: #fff;
+}
+
+td[contenteditable="true"]:focus {
+  background: #1e273a;
+  outline: 1.5px solid var(--neon-green);
+  color: var(--neon-green);
+}
+
+td {
+  border-radius: 7px;
+  background-color: #1a2233;
+}
+
+td:not([contenteditable="true"]):hover {
+  background: #141a23;
+}
+
+th .handle {
+  font-size: 1.1em;
+  color: var(--neon-blue);
+  cursor: move;
+  margin-right: 7px;
+  user-select: none;
+  filter: drop-shadow(0 0 3px var(--neon-blue));
+}
+
+th .del-col-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.98em;
+  padding: 1px 8px;
+  color: #fff;
+  background: var(--neon-red);
+  border-radius: 7px;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  font-weight: 700;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+  z-index: 3;
+}
+
+th:hover .del-col-btn {
+  visibility: visible;
+  opacity: 1;
+  background: var(--neon-orange);
+  color: #161d24;
+}
+
+td.row-handle {
+  cursor: move;
+  text-align: center;
+  font-weight: 700;
+  user-select: none;
+  width: 35px;
+  background: #232d3c;
+  color: var(--neon-blue);
+}
+
+.formula-panel {
+  display: none;
+  background: #161d24;
+  border: 1.5px solid var(--neon-blue);
+  border-radius: 14px;
+  padding: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  user-select: none;
+  box-shadow: 0 4px 22px #00ffd944;
+  animation: fadeInPanel 0.7s;
+}
+
+.formula-panel label {
+  font-weight: 600;
+  color: var(--neon-blue);
+  user-select: none;
+  min-width: 70px;
+}
+
+.formula-panel select,
+.formula-panel input {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--neon-green);
+  background: #232d3c;
+  font-size: 1rem;
+  color: var(--white);
+  outline: none;
+  min-width: 110px;
+  flex: 1 1 120px;
+  box-sizing: border-box;
+  user-select: text;
+  transition: border var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.formula-panel button {
+  background: linear-gradient(90deg, var(--neon-blue) 70%, var(--neon-green) 110%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 1.07rem;
+  margin-left: 8px;
+  flex: 0 0 auto;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.formula-panel button:hover {
+  background: linear-gradient(90deg, var(--neon-green) 60%, var(--neon-blue) 110%);
+  color: #232323;
+  transform: scale(1.04);
+}
+
+.statistics-panel {
+  background: #232d3c;
+  border-radius: 14px;
+  padding: 22px 25px 20px 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neon-blue);
+  margin-top: 10px;
+  max-width: 520px;
+  box-shadow: 0 8px 26px #00ffd92d;
+  user-select: none;
+  margin-bottom: 26px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.statistics-panel label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1.09em;
+  flex: 1 1 160px;
+}
+
+.statistics-panel select {
+  margin-bottom: 8px;
+  width: 190px;
+  font-size: 1em;
+  background: #1b2432;
+  color: var(--neon-green);
+  border: 1.5px solid var(--neon-blue);
+  border-radius: 8px;
+  padding: 7px 8px;
+  transition: border var(--transition-fast);
+}
+
+#showStatsBtn {
+  background: linear-gradient(90deg, var(--neon-green) 55%, var(--neon-blue) 110%);
+  font-size: 1em;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 15px;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  box-shadow: 0 2px 16px #00ffd919;
+}
+
+#showStatsBtn:active {
+  background: linear-gradient(90deg, var(--neon-blue) 57%, var(--neon-green) 110%);
+  transform: scale(0.96);
+}
+
+#showStatsBtn:hover {
+  background: linear-gradient(90deg, var(--neon-blue) 55%, var(--neon-green) 110%);
+  color: #232323;
+}
+
+#statsResults {
+  flex: 100 1 320px;
+  margin-top: 12px;
+  margin-left: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  padding-top: 3px;
+  font-size: 1.13em;
+  color: var(--neon-yellow);
+}
+
+.chart-config-panel {
+  background: linear-gradient(114deg, #232d3c 80%, #1b2331 100%);
+  border-radius: 16px;
+  padding: 32px 22px 18px 22px;
+  margin: 22px 0 28px 0;
+  box-shadow: 0 6px 32px #00ffd90a, 0 1.5px 7px #00ffd933;
+  border: 1.8px solid var(--neon-blue);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 312px;
+  animation: fadeInPanel 0.8s;
+  color: var(--text-bright);
+}
+
+.chart-config-panel h3 {
+  margin-bottom: 13px;
+  font-size: 1.38em;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--neon-green);
+  text-shadow: 0 1px 6px var(--neon-green);
+}
+
+.chart-config-panel h3:before {
+  content: "📊";
+  font-size: 1.25em;
+}
+
+.chart-config-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px 22px;
+  align-items: center;
+  margin-bottom: 20px;
+  margin-top: 2px;
+}
+
+.chart-config-fields label {
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--neon-blue);
+  margin-right: 8px;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 95px;
+}
+
+.chart-config-fields select,
+.chart-config-fields input[type="color"],
+.chart-config-fields input[type="text"] {
+  background: #1b2432;
+  border: 1.3px solid var(--neon-blue);
+  border-radius: 8px;
+  font-size: 1em;
+  padding: 6px 10px;
+  min-width: 72px;
+  font-family: inherit;
+  color: var(--neon-green);
+  transition: border var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.chart-config-fields input[type="color"] {
+  padding: 0;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2.2px solid var(--neon-blue);
+  cursor: pointer;
+}
+
+.chart-config-fields select:focus,
+.chart-config-fields input[type="color"]:focus,
+.chart-config-fields input[type="text"]:focus {
+  border-color: var(--neon-green);
+  box-shadow: 0 0 9px var(--neon-blue);
+  outline: none;
+  color: var(--neon-blue);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .statistics-panel,
+  .chart-config-panel {
+    min-width: unset;
+    width: 98vw;
+  }
+  .chart-config-panel {
+    padding: 12px 2vw;
+  }
+}
+
+.chart-container {
+  background: rgba(30, 40, 55, 0.99);
+  border-radius: 13px;
+  padding: 15px;
+  box-shadow: 0 4px 18px #00ffd91a, 0 1px 9px #00ffd911;
+  position: relative;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.chart-container:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 28px #00ffd92a, 0 2px 14px #00ffd924;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--neon-blue);
+}
+
+.chart-title {
+  font-weight: 700;
+  color: var(--neon-yellow);
+  font-size: 1.17em;
+  text-shadow: 0 1px 6px var(--neon-blue);
+}
+
+.chart-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.chart-actions button {
+  padding: 4px 10px;
+  font-size: 0.92em;
+  margin: 0;
+  background: linear-gradient(90deg, var(--neon-blue) 60%, var(--neon-green) 120%);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  box-shadow: 0 1px 6px #00ffd933;
+}
+
+.chart-canvas {
+  max-width: 100%;
+  height: auto;
+  margin-top: 8px;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  background: #1b2432;
+}
+::-webkit-scrollbar-thumb {
+  background: #263241;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px #00ffd944;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-blue);
+}
+.table-scroll-x {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: visible;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 1.5px 12px #00ffd911;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      margin-bottom: 22px;
+      /* scrollbar at top: */
+      scrollbar-gutter: stable both-edges;
+    }
+    .table-scroll-x::-webkit-scrollbar {
+      height: 13px;
+      background: #1b2432;
+    }
+    .table-scroll-x::-webkit-scrollbar-thumb {
+      background: #263241;
+      border-radius: 8px;
+      box-shadow: 0 1px 6px #00ffd944;
+    }
+    .table-scroll-x::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-blue);
+    }
+    table {
+      min-width: 600px;
+      width: max-content;
+      max-width: 100vw;
+      table-layout: auto;
+      margin: 0;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    th, td {
+      min-width: 124px;
+      max-width: 420px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background var(--transition-fast), color var(--transition-fast), min-width .22s, max-width .22s;
+    }
+    @media (max-width: 900px) {
+      th, td { min-width: 92px; font-size: 0.97em; }
+      table { font-size: 0.97em; }
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(90deg, #263241ee 80%, #202b38ee 100%);
+      z-index: 9;
+      box-shadow: 0 2px 6px #00ffd92c;
+    }
+    /* Optional: fade at table edge if overflowed */
+    .table-scroll-x:after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 28px;
+      background: linear-gradient(90deg,transparent,#1b2432 70%);
+      z-index: 10;
+      display: block;
+    }
+    .table-scroll-x {
+      position: relative;
+    }
+    /* --- TOP SCROLLBAR FAKE CONTAINER --- */
+.table-scrollbar-top {
+  width: 100%;
+  height: 17px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: transparent;
+  /* visually hide but keep scrollbar */
+  margin-bottom: -17px;
+  position: relative;
+  z-index: 11;
+}
+.table-scrollbar-inner {
+  height: 1px;
+}
+/* Style the top scrollbar (webkit only) */
+.table-scrollbar-top::-webkit-scrollbar {
+  height: 13px;
+  background: #1b2432;
+}
+.table-scrollbar-top::-webkit-scrollbar-thumb {
+  background: #263241;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px #00ffd944;
+}
+.table-scrollbar-top::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-blue);
+}
+/* Your normal .table-scroll-x as before */
+.table-scroll-x {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 1.5px 12px #00ffd911;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-bottom: 22px;
+  scrollbar-gutter: stable both-edges;
+}
+.table-scroll-x::-webkit-scrollbar {
+  height: 13px;
+  background: #1b2432;
+}
+.table-scroll-x::-webkit-scrollbar-thumb {
+  background: #263241;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px #00ffd944;
+}
+.table-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-blue);
+}
+  .letter-header {
+  background: var(--bg-panel-dark);
+  color: var(--neon-yellow);
+  font-weight: bold;
+  text-align: center;
+  font-size: 1.13em;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.formula-eval-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #232d3c;
+  border-radius: 14px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px #00ffd933;
+  font-size: 1.08em;
+}
+#excelFormulaInput {
+  border: 1.5px solid var(--neon-blue);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 1em;
+  background: #1b2432;
+  color: var(--white);
+  margin-left: 9px;
+  margin-right: 9px;
+  min-width: 120px;
+}
+#excelFormulaApplyBtn {
+  background: linear-gradient(90deg, var(--neon-green) 50%, var(--neon-blue) 110%);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+#excelFormulaApplyBtn:hover {
+  background: linear-gradient(90deg, var(--neon-blue) 50%, var(--neon-green) 110%);
+}
+.excel-formula-error {
+  color: var(--neon-red);
+  font-size: 1em;
+  margin-left: 12px;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>
+      Advanced Excel Database & Chart Manager
+      <button id="delDbBtn" title="Delete Current Database">Delete Database</button>
+    </h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="input-row">
+      <input type="file" id="upload" accept=".xlsx" />
+      <button id="createDbBtn">Create Database</button>
+      <input type="text" id="searchBox" placeholder="Search..." />
+      <button id="addRowBtn">Add Row</button>
+      <button id="addColBtn">Add Column</button>
+      <button id="exportBtn">Export Excel</button>
+      <button id="printBtn">Print</button>
+      <button id="delRowBtn" class="btn-danger">Delete Row</button>
+      <button id="startFormulaBtn">Add Formula Column</button>
+    </div>
+    <div class="input-row" id="inputFields"></div>
+
+    <div class="formula-panel" id="formulaPanel" aria-label="Formula Builder Panel" role="region" style="display:none;">
+      <label>Field 1:</label>
+      <select id="formulaLeft"></select>
+      <label>Operator:</label>
+      <select id="formulaOperator" aria-label="Operator">
+        <option value="+">+</option>
+        <option value="-">-</option>
+        <option value="*">*</option>
+        <option value="/">/</option>
+      </select>
+      <label>Field 2:</label>
+      <select id="formulaRight"></select>
+      <label>Or Value:</label>
+      <input type="text" id="formulaValue" aria-label="Literal Value" placeholder="Enter literal value" />
+      <button id="applyFormulaBtn" aria-label="Apply Formula">Apply</button>
+      <button id="cancelFormulaBtn" aria-label="Cancel Formula">Cancel</button>
+    </div>
+
+    <div class="statistics-panel" id="statisticsPanel" aria-label="Statistics Panel" role="region" style="display:none;">
+      <label for="statsColumnSelect">Select column for statistics:</label>
+      <select id="statsColumnSelect"></select>
+      <button id="showStatsBtn" type="button">Show Stats</button>
+      <div id="statsResults" style="margin-top:0;"></div>
+    </div>
+
+    <div class="chart-config-panel">
+      <h3>Chart Configuration</h3>
+      <div class="chart-config-fields">
+        <label>Chart Type:
+          <select id="chartType">
+            <option value="bar">Bar Chart</option>
+            <option value="line">Line Chart</option>
+            <option value="pie">Pie Chart</option>
+            <option value="doughnut">Doughnut Chart</option>
+            <option value="scatter">Scatter Plot</option>
+            <option value="polarArea">Polar Area</option>
+          </select>
+        </label>
+        <label>Chart Title: <input id="chartTitle" placeholder="Enter chart title" /></label>
+        <label>X-Axis Field: <select id="xAxisField"></select></label>
+        <label>Y-Axis Field: <select id="yAxisField"></select></label>
+        <label>Group By: <select id="groupByField"><option value="">None</option></select></label>
+        <label>Filter Column: <select id="filterColumn"><option value="">No Filter</option></select></label>
+        <div id="filterHost" style="margin-top:8px;"></div>
+        <label>Color Scheme:
+          <select id="colorScheme">
+            <option value="rainbow">Rainbow</option>
+            <option value="blue">Blue Tones</option>
+            <option value="green">Green Tones</option>
+            <option value="red">Red Tones</option>
+            <option value="purple">Purple Tones</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label>Background Color: <input type="color" id="bgColor" value="#ffffff" /></label>
+      </div>
+      <div>
+        <button id="createChartBtn" class="btn-success">Create Chart</button>
+        <button id="updateChartBtn" class="btn-warning">Update Current Chart</button>
+      </div>
+      <div id="chartsGrid" class="charts-grid"></div>
+    </div>
+    <div class="formula-eval-panel" id="formulaEvalPanel">
+  <form id="excelFormulaForm" autocomplete="off">
+    <label for="excelFormulaInput"><b>Excel-like Formula:</b></label>
+    <input type="text" id="excelFormulaInput" placeholder="e.g. C=A+2*B" autocomplete="off" style="width:220px;" />
+    <button type="submit" id="excelFormulaApplyBtn">Apply Formula</button>
+    <span id="excelFormulaError" class="excel-formula-error"></span>
+  </form>
+</div>
+     <div class="table-scrollbar-top" id="table-scrollbar-top"></div>
+    <div class="table-scroll-x" id="table-scroll-x">
+      <table id="dataTable">
+  <thead>
+    <tr id="letterRow"></tr>    <!-- <-- NEW: for A,B,C... -->
+    <tr id="headerRow"></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+    </div>
+<script>
+// ========== FIRESTORE + LOCAL STORAGE SYNC ==========
+// Assumes firebase is initialized in HTML as: const db = firebase.firestore();
+
+let databases = {}, currentDB = "default", headers = [], types = {}, jsonData = [],
+    savedCharts = [], chartInstances = {}, currentChartId = null;
+
+// Local Storage helpers
+function saveLocal() {
+  localStorage.setItem("excel3d_databases", JSON.stringify(databases));
+  localStorage.setItem("excel3d_currentDB", currentDB);
+  localStorage.setItem("excel3d_charts", JSON.stringify(savedCharts));
+}
+function loadLocal() {
+  const dbs = localStorage.getItem("excel3d_databases");
+  const curr = localStorage.getItem("excel3d_currentDB");
+  const chs = localStorage.getItem("excel3d_charts");
+  if (dbs) databases = JSON.parse(dbs);
+  if (chs) savedCharts = JSON.parse(chs);
+  if (curr && databases[curr]) currentDB = curr;
+}
+
+// Firestore helpers
+async function pullFromCloud() {
+  databases = {};
+  const dbSnaps = await db.collection("databases").get();
+  dbSnaps.forEach(doc => databases[doc.id] = doc.data());
+  const chartSnap = await db.collection("charts").get();
+  savedCharts = chartSnap.docs.map(d => d.data());
+  if (!databases[currentDB]) {
+    currentDB = Object.keys(databases)[0] || "default";
+    if (!databases[currentDB]) databases[currentDB] = { headers: [], types: {}, jsonData: [] };
+  }
+  saveLocal();
+}
+async function pushToCloud() {
+  // Save all databases
+  const batch = db.batch();
+  Object.keys(databases).forEach(name => {
+    const docRef = db.collection("databases").doc(name);
+    batch.set(docRef, databases[name]);
+  });
+  // Remove deleted databases from cloud
+  const allDocs = await db.collection("databases").get();
+  allDocs.forEach(doc => {
+    if (!databases[doc.id]) batch.delete(doc.ref);
+  });
+  // Save all charts
+  const chartCol = db.collection("charts");
+  (await chartCol.get()).docs.forEach(d => batch.delete(d.ref));
+  savedCharts.forEach(cfg => batch.set(chartCol.doc(cfg.id), cfg));
+  await batch.commit();
+}
+async function saveAll() {
+  saveLocal();
+  await pushToCloud();
+}
+
+  function colIdxToLabel(idx) {
+  let label = '';
+  idx++;
+  while (idx > 0) {
+    let rem = (idx - 1) % 26;
+    label = String.fromCharCode(65 + rem) + label;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return label;
+}
+
+// ================ UI LOGIC ================
+const tabsDiv = document.getElementById("tabs"),
+      uploadInput = document.getElementById("upload"),
+      createDbBtn = document.getElementById("createDbBtn"),
+      searchBox = document.getElementById("searchBox"),
+      addRowBtn = document.getElementById("addRowBtn"),
+      exportBtn = document.getElementById("exportBtn"),
+      printBtn = document.getElementById("printBtn"),
+      delRowBtn = document.getElementById("delRowBtn"),
+      startFormulaBtn = document.getElementById("startFormulaBtn"),
+      formulaPanel = document.getElementById("formulaPanel"),
+      formulaLeft = document.getElementById("formulaLeft"),
+      formulaOperator = document.getElementById("formulaOperator"),
+      formulaRight = document.getElementById("formulaRight"),
+      formulaValue = document.getElementById("formulaValue"),
+      applyFormulaBtn = document.getElementById("applyFormulaBtn"),
+      cancelFormulaBtn = document.getElementById("cancelFormulaBtn"),
+      inputFieldsDiv = document.getElementById("inputFields"),
+      headerRow = document.getElementById("headerRow"),
+      tbody = document.querySelector("#dataTable tbody"),
+      statisticsPanel = document.getElementById("statisticsPanel"),
+      statsColumnSelect = document.getElementById("statsColumnSelect"),
+      statsResults = document.getElementById("statsResults"),
+      showStatsBtn = document.getElementById("showStatsBtn"),
+      chartTypeSel = document.getElementById("chartType"),
+      chartTitleInp = document.getElementById("chartTitle"),
+      xAxisFieldSel = document.getElementById("xAxisField"),
+      yAxisFieldSel = document.getElementById("yAxisField"),
+      groupByFieldSel = document.getElementById("groupByField"),
+      filterColumnSel = document.getElementById("filterColumn"),
+      filterHostDiv = document.getElementById("filterHost"),
+      colorSchemeSel = document.getElementById("colorScheme"),
+      bgColorInp = document.getElementById("bgColor"),
+      createChartBtn = document.getElementById("createChartBtn"),
+      updateChartBtn = document.getElementById("updateChartBtn"),
+      chartsGrid = document.getElementById("chartsGrid"),
+      delDbBtn = document.getElementById("delDbBtn");
+
+// --- Tabs ---
+function renderTabs() {
+  tabsDiv.innerHTML = "";
+  for (const dbName in databases) {
+    const btn = document.createElement("button");
+    btn.className = dbName === currentDB ? "tab-button active" : "tab-button";
+    btn.textContent = dbName;
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.title = `Delete database "${dbName}"`;
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (Object.keys(databases).length === 1) {
+        alert("At least one database must remain.");
+        return;
+      }
+      if (confirm(`Delete database "${dbName}"? This cannot be undone.`)) {
+        delete databases[dbName];
+        await saveAll();
+        await loadCurrentDB();
+      }
+    };
+    btn.onclick = async () => {
+      if (currentDB !== dbName) {
+        currentDB = dbName;
+        await loadCurrentDB();
+      }
+    };
+    btn.appendChild(delBtn);
+    tabsDiv.appendChild(btn);
+  }
+}
+delDbBtn.onclick = async function() {
+  if (!currentDB) return;
+  if (Object.keys(databases).length === 1) {
+    alert("At least one database must remain.");
+    return;
+  }
+  if (confirm(`Delete the current database "${currentDB}"? This cannot be undone.`)) {
+    delete databases[currentDB];
+    const all = Object.keys(databases);
+    currentDB = all.length ? all[0] : "default";
+    if (!databases[currentDB]) databases[currentDB] = { headers: [], types: {}, jsonData: [] };
+    await saveAll();
+    await loadCurrentDB();
+  }
+};
+
+createDbBtn.onclick = async function() {
+  let name;
+  while (true) {
+    name = prompt("Database name:", "Sheet" + (Object.keys(databases).length + 1));
+    if (name === null) return;
+    name = name.trim();
+    if (name === "" || databases[name]) {
+      alert(name === "" ? "Name required." : "Sheet already exists.");
+      continue;
+    }
+    break;
+  }
+  let colCount = parseInt(prompt("How many columns?", "3"));
+  if (isNaN(colCount) || colCount < 1) return;
+  const cols = [];
+  const ts = {};
+  for (let i = 0; i < colCount; ++i) {
+    let colName;
+    while (true) {
+      colName = prompt(`Column ${i + 1} name:`, "Col" + (i + 1));
+      if (!colName) alert("Name required.");
+      else if (cols.includes(colName)) alert("Duplicate name.");
+      else break;
+    }
+    let colType = prompt(`Type for '${colName}' (text,number,date,dropdown):`, "text") || "text";
+    if (colType.trim().toLowerCase() === "dropdown") {
+      const opts = prompt(`Dropdown options (comma separated) for '${colName}':`, "Option1,Option2").split(",").map(s => s.trim());
+      ts[colName] = { type: "dropdown", options: opts };
+    } else ts[colName] = { type: colType.trim().toLowerCase() };
+    cols.push(colName);
+  }
+  databases[name] = { headers: cols, types: ts, jsonData: [] };
+  currentDB = name;
+  await saveAll();
+  await loadCurrentDB();
+};
+
+// Input fields
+function renderInputs() {
+  inputFieldsDiv.innerHTML = "";
+  headers.forEach(h => {
+    const cfg = types[h] || { type: "text" };
+    let el;
+    if (cfg.type === "dropdown") {
+      el = document.createElement("select");
+      cfg.options?.forEach(o => el.append(new Option(o, o)));
+    } else {
+      el = document.createElement("input");
+      el.type = cfg.type || "text";
+    }
+    el.placeholder = h;
+    el.id = "input-" + h;
+    inputFieldsDiv.appendChild(el);
+  });
+}
+
+// Table
+function buildTable() {
+  // --- Column Letter Row ---
+const letterRow = document.getElementById("letterRow");
+letterRow.innerHTML = "";
+const cornerTH2 = document.createElement("th");
+cornerTH2.className = "letter-header";
+cornerTH2.textContent = "#";
+letterRow.appendChild(cornerTH2);
+headers.forEach((h, i) => {
+  const th = document.createElement("th");
+  th.className = "letter-header";
+  th.textContent = colIdxToLabel(i);
+  letterRow.appendChild(th);
+});
+  headerRow.innerHTML = "";
+  tbody.innerHTML = "";
+  const cornerTH = document.createElement("th");
+  headerRow.appendChild(cornerTH);
+
+  headers.forEach(h => {
+    const th = document.createElement("th");
+    th.dataset.col = h;
+    th.classList.add("th-with-del");
+    th.style.position = "relative";
+    th.innerHTML = `
+      <span class="handle" title="Drag to reorder columns">&#8801;</span>
+      <span class="col-name" contenteditable="true" spellcheck="false">${h}</span>
+      <button title="Delete this column" class="del-col-btn">&times;</button>
+    `;
+
+    // Rename column on blur
+    const colNameSpan = th.querySelector(".col-name");
+    colNameSpan.addEventListener("blur", async () => {
+      const newName = colNameSpan.textContent.trim();
+      if (newName && newName !== h && !headers.includes(newName)) {
+        await renameColumn(h, newName);
+      } else {
+        colNameSpan.textContent = h;
+      }
+    });
+
+    // Delete column button
+    th.querySelector(".del-col-btn").onclick = async (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete column "${h}" from all data? This cannot be undone.`)) {
+        await deleteColumn(h);
+      }
+    };
+
+    headerRow.appendChild(th);
+  });
+}
+  // Add rows
+  jsonData.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    const tdHandle = document.createElement("td");
+    tdHandle.className = "row-handle";
+    tdHandle.textContent = "\u2261";
+    tr.appendChild(tdHandle);
+    headers.forEach(h => {
+      const td = document.createElement("td");
+      td.contentEditable = true;
+      td.spellcheck = false;
+      td.textContent = row[h] || "";
+      td.addEventListener("blur", async () => {
+        jsonData[i][h] = td.textContent;
+        databases[currentDB].jsonData = jsonData;
+        await saveAll();
+      });
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+async function deleteColumn(col) {
+  const idx = headers.indexOf(col);
+  if (idx === -1) return;
+  headers.splice(idx, 1);
+  jsonData.forEach(row => delete row[col]);
+  delete types[col];
+  databases[currentDB].headers = headers;
+  databases[currentDB].types = types;
+  databases[currentDB].jsonData = jsonData;
+  await saveAll();
+  renderInputs();
+  buildTable();
+  enableDragDrop();
+  populateFormulaFields();
+  populateStatsColumns();
+  populateChartFields();
+}
+async function renameColumn(oldName, newName) {
+  const idx = headers.indexOf(oldName);
+  headers[idx] = newName;
+  jsonData.forEach(row => {
+    if (row.hasOwnProperty(oldName)) {
+      row[newName] = row[oldName];
+      delete row[oldName];
+    }
+  });
+  types[newName] = types[oldName];
+  delete types[oldName];
+  databases[currentDB].headers = headers;
+  databases[currentDB].types = types;
+  databases[currentDB].jsonData = jsonData;
+  await saveAll();
+  renderInputs();
+  buildTable();
+  enableDragDrop();
+  populateFormulaFields();
+  populateStatsColumns();
+  populateChartFields();
+}
+function enableDragDrop() {
+  Sortable.create(headerRow, {
+    animation: 150,
+    handle: ".handle",
+    ghostClass: "sortable-ghost",
+    onEnd: async e => {
+      if (e.oldIndex > 0 && e.newIndex > 0) {
+        const col = headers.splice(e.oldIndex - 1, 1)[0];
+        headers.splice(e.newIndex - 1, 0, col);
+        databases[currentDB].headers = headers;
+        await saveAll();
+        buildTable();
+        enableDragDrop();
+        populateFormulaFields();
+        populateStatsColumns();
+        populateChartFields();
+      }
+    }
+  });
+  Sortable.create(tbody, {
+    animation: 150,
+    handle: ".row-handle",
+    ghostClass: "sortable-ghost",
+    onEnd: async e => {
+      const row = jsonData.splice(e.oldIndex, 1)[0];
+      jsonData.splice(e.newIndex, 0, row);
+      databases[currentDB].jsonData = jsonData;
+      await saveAll();
+      buildTable();
+      enableDragDrop();
+    }
+  });
+}
+function populateFormulaFields() {
+  formulaLeft.innerHTML = "";
+  formulaRight.innerHTML = "";
+  headers.forEach(h => {
+    formulaLeft.appendChild(new Option(h, h));
+    formulaRight.appendChild(new Option(h, h));
+  });
+  formulaValue.value = "";
+}
+function populateStatsColumns() {
+  if (!headers.length) {
+    statisticsPanel.style.display = 'none';
+    return;
+  }
+  statisticsPanel.style.display = 'flex';
+  statsColumnSelect.innerHTML = "";
+  headers.forEach(h => {
+    const opt = document.createElement("option");
+    opt.value = h;
+    opt.textContent = h;
+    statsColumnSelect.appendChild(opt);
+  });
+  statsResults.innerHTML = "";
+}
+function populateChartFields() {
+  [xAxisFieldSel, yAxisFieldSel, groupByFieldSel, filterColumnSel].forEach(sel => {
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = "";
+    if (sel === groupByFieldSel || sel === filterColumnSel) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = (sel === groupByFieldSel ? "None" : "No Filter");
+      sel.appendChild(opt);
+    }
+    headers.forEach(h => {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h;
+      sel.appendChild(opt);
+    });
+    sel.value = val || "";
+  });
+}
+
+// --- Row/col add/delete ---
+addRowBtn.onclick = async () => {
+  const row = {};
+  headers.forEach(h => row[h] = document.getElementById("input-" + h)?.value || "");
+  jsonData.push(row);
+  databases[currentDB].jsonData = jsonData;
+  await saveAll();
+  buildTable();
+  enableDragDrop();
+  populateStatsColumns();
+  populateChartFields();
+};
+delRowBtn.onclick = async () => {
+  const idx = parseInt(prompt("Enter 0-based row index to delete:"));
+  if (isNaN(idx) || idx < 0 || idx >= jsonData.length) return alert("Invalid index");
+  jsonData.splice(idx, 1);
+  databases[currentDB].jsonData = jsonData;
+  await saveAll();
+  buildTable();
+  enableDragDrop();
+  populateStatsColumns();
+  populateChartFields();
+};
+exportBtn.onclick = () => {
+  if (!jsonData.length) { alert("No data to export."); return; }
+  const ws = XLSX.utils.json_to_sheet(jsonData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, currentDB);
+  XLSX.writeFile(wb, currentDB + ".xlsx");
+};
+printBtn.onclick = () => window.print();
+searchBox.oninput = () => {
+  const q = searchBox.value.toLowerCase();
+  const filtered = jsonData.filter(r => headers.some(h => (r[h] || "").toString().toLowerCase().includes(q)));
+  renderFilteredRows(filtered);
+};
+function filterTable() {
+  const q = searchBox.value.toLowerCase();
+  const filtered = jsonData.filter(row => headers.some(h => (row[h] || "").toString().toLowerCase().includes(q)));
+  renderFilteredRows(filtered);
+}
+function renderFilteredRows(filtered) {
+  tbody.innerHTML = "";
+  filtered.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    const tdHandle = document.createElement("td");
+    tdHandle.className = "row-handle";
+    tdHandle.textContent = "\u2261";
+    tr.appendChild(tdHandle);
+    headers.forEach(h => {
+      const td = document.createElement("td");
+      td.contentEditable = true;
+      td.spellcheck = false;
+      td.textContent = row[h] || "";
+      td.addEventListener("blur", async () => {
+        let idx = jsonData.indexOf(row);
+        if (idx >= 0) {
+          jsonData[idx][h] = td.textContent;
+          databases[currentDB].jsonData = jsonData;
+          await saveAll();
+        }
+      });
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// --- Formula ---
+applyFormulaBtn.onclick = async function () {
+  const newCol = prompt("New column name:", "Calc");
+  if (!newCol) return alert("Please enter a column name.");
+  if (headers.includes(newCol)) return alert("Column already exists.");
+  const left = formulaLeft.value;
+  const op = formulaOperator.value;
+  const rightField = formulaRight.value;
+  const literalValue = formulaValue.value.trim();
+  const rightVal = literalValue !== "" ? literalValue : rightField;
+  headers.push(newCol);
+  types[newCol] = { type: "text", options: [] };
+  jsonData.forEach(row => {
+    let leftVal = row[left];
+    let rightVal2 = rightVal in row ? row[rightVal] : rightVal;
+    if (!isNaN(Date.parse(leftVal))) leftVal = new Date(leftVal);
+    if (!isNaN(Date.parse(rightVal2))) rightVal2 = new Date(rightVal2);
+    let val;
+    try {
+      switch (op) {
+        case "+": val = leftVal instanceof Date && !isNaN(+rightVal2) ? new Date(leftVal.getTime() + rightVal2 * 86400000) : leftVal instanceof Date && rightVal2 instanceof Date ? new Date(leftVal.getTime() + rightVal2.getTime()) : Number(leftVal) + Number(rightVal2); break;
+        case "-": val = leftVal instanceof Date && rightVal2 instanceof Date ? (leftVal.getTime() - rightVal2.getTime()) / 86400000 : leftVal instanceof Date && !isNaN(+rightVal2) ? new Date(leftVal.getTime() - rightVal2 * 86400000) : Number(leftVal) - Number(rightVal2); break;
+        case "*": val = Number(leftVal) * Number(rightVal2); break;
+        case "/": val = Number(leftVal) / Number(rightVal2); break;
+        default: val = "#ERR";
+      }
+    } catch (e) { val = "#ERR"; }
+    row[newCol] = val instanceof Date ? val.toISOString() : val;
+  });
+  databases[currentDB].headers = headers;
+  databases[currentDB].types = types;
+  databases[currentDB].jsonData = jsonData;
+  await saveAll();
+  renderInputs();
+  buildTable();
+  enableDragDrop();
+  populateFormulaFields();
+  populateStatsColumns();
+  populateChartFields();
+  formulaPanel.style.display = "none";
+};
+cancelFormulaBtn.onclick = () => formulaPanel.style.display = "none";
+startFormulaBtn.onclick = () => { formulaPanel.style.display = "flex"; populateFormulaFields(); };
+
+// --- File Upload / Import ---
+uploadInput.onchange = async (e) => {
+  if(!e.target.files.length) return;
+  const file = e.target.files[0];
+  const fr = new FileReader();
+  fr.onload = async ev => {
+    const wb = XLSX.read(new Uint8Array(ev.target.result), {type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+    if(!rows.length) return;
+    const h = Object.keys(rows[0]), ts = {};
+    h.forEach(c => {
+      const v = rows[0][c];
+      if(!isNaN(parseFloat(v)) && isFinite(v)) ts[c] = { type: "number" };
+      else if(Date.parse(v)) ts[c] = { type: "date" };
+      else ts[c] = { type: "text" };
+    });
+    let baseName = file.name.replace(/\.[^/.]+$/, "") || wb.SheetNames[0] || "Sheet";
+    let dbName = baseName;
+    let suffix = 1;
+    while (databases[dbName]) {
+      dbName = baseName + "_" + suffix++;
+    }
+    dbName = prompt("Enter new database name:", dbName) || dbName;
+    if (!dbName.trim()) return;
+    if (databases[dbName]) {
+      alert("A database with this name already exists. Please upload again with a different name.");
+      return;
+    }
+    databases[dbName] = { headers: h, types: ts, jsonData: rows };
+    currentDB = dbName;
+    await saveAll();
+    await loadCurrentDB();
+  };
+  fr.readAsArrayBuffer(file);
+};
+
+// --- Statistics Panel ---
+showStatsBtn.onclick = function () {
+  const col = statsColumnSelect.value;
+  if (!col) {
+    statsResults.innerHTML = "";
+    return;
+  }
+  const data = jsonData.map(r => parseFloat(r[col])).filter(n => !isNaN(n));
+  if (!data.length) {
+    statsResults.innerHTML = `<span style="color:#c02723;">No numeric data for column "${col}"</span>`;
+    return;
+  }
+  const avg = (data.reduce((a, b) => a + b, 0) / data.length).toFixed(3);
+  const sorted = data.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = (sorted.length % 2 !== 0) ? sorted[mid] : ((sorted[mid - 1] + sorted[mid]) / 2).toFixed(3);
+  const freq = {};
+  let maxFreq = 0, mode = [];
+  data.forEach(n => {
+    freq[n] = (freq[n] || 0) + 1;
+    if (freq[n] > maxFreq) maxFreq = freq[n];
+  });
+  for (const k in freq) {
+    if (freq[k] === maxFreq) mode.push(k);
+  }
+  statsResults.innerHTML = `
+    <div>Average: <strong>${avg}</strong></div>
+    <div>Median: <strong>${median}</strong></div>
+    <div>Mode: <strong>${mode.join(', ')}</strong></div>
+    <div>Count: <strong>${data.length}</strong></div>
+  `;
+};
+
+// === CHART PANEL LOGIC ===
+function getColorList(scheme, count) {
+  const baseColors = {
+    rainbow: ['#ff6384','#36a2eb','#ffce56','#4bc0c0','#9966ff','#ff9f40'],
+    blue: ['#1f77b4','#aec7e8','#6baed6','#3182bd','#9ecae1'],
+    green: ['#2ca02c','#98df8a','#66c2a4','#41ae76','#a1d99b'],
+    red: ['#d62728','#ff9896','#fb6a4a','#ef3b2c','#fcae91'],
+    purple: ['#9467bd','#c5b0d5','#807dba','#6a51a3','#bcbddc']
+  };
+  const colors = baseColors[scheme] || baseColors.rainbow;
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(colors[i % colors.length]);
+  }
+  return result;
+}
+function getFilteredDataForChart(config) {
+  let filtered = jsonData.slice();
+  if (config.filterColumn) {
+    const ctype = types[config.filterColumn]?.type || 'text';
+    if (ctype === 'number') {
+      const min = Number(document.getElementById('filterMin')?.value || '-Infinity');
+      const max = Number(document.getElementById('filterMax')?.value || 'Infinity');
+      filtered = filtered.filter(r => +r[config.filterColumn] >= min && +r[config.filterColumn] <= max);
+    } else if (ctype === 'date') {
+      const from = document.getElementById('filterFrom')?.value;
+      const to = document.getElementById('filterTo')?.value;
+      filtered = filtered.filter(r => {
+        const dt = Date.parse(r[config.filterColumn]);
+        if (from && dt < Date.parse(from)) return false;
+        if (to && dt > Date.parse(to)) return false;
+        return true;
+      });
+    } else {
+      const val = document.getElementById('filterVal')?.value;
+      if (val) filtered = filtered.filter(r => r[config.filterColumn] === val);
+    }
+  }
+  return filtered;
+}
+function prepareChartData(data, config) {
+  const colors = getColorList(config.colorScheme, data.length);
+  if (config.type === "pie" || config.type === "doughnut" || config.type === "polarArea") {
+    const aggregated = {};
+    data.forEach(r => {
+      const key = r[config.xAxisField];
+      aggregated[key] = (aggregated[key] || 0) + (+r[config.yAxisField] || 0);
+    });
+    return {
+      labels: Object.keys(aggregated),
+      datasets: [{
+        data: Object.values(aggregated),
+        backgroundColor: getColorList(config.colorScheme, Object.keys(aggregated).length),
+        borderColor: "#fff",
+        borderWidth: 2
+      }]
+    };
+  }
+  if (config.groupByField) {
+    const grouped = {};
+    data.forEach(r => {
+      const group = r[config.groupByField];
+      if (!grouped[group]) grouped[group] = [];
+      grouped[group].push(r);
+    });
+    const labelSet = new Set(data.map(r => r[config.xAxisField]));
+    const labels = Array.from(labelSet);
+    const datasets = Object.keys(grouped).map((g, i) => ({
+      label: g || "(no group)",
+      data: labels.map(l => {
+        const matched = grouped[g].filter(x => x[config.xAxisField] == l);
+        let val = 0;
+        matched.forEach(m => { val += +m[config.yAxisField] || 0; });
+        return val;
+      }),
+      backgroundColor: colors[i % colors.length],
+      borderColor: colors[i % colors.length],
+      fill: false
+    }));
+    return { labels, datasets };
+  } else {
+    return {
+      labels: data.map(r => r[config.xAxisField]),
+      datasets: [{
+        label: config.yAxisField,
+        data: data.map(r => +r[config.yAxisField] || 0),
+        backgroundColor: colors,
+        borderColor: colors,
+        fill: false
+      }]
+    };
+  }
+}
+function renderChart(config) {
+  if (config.database !== currentDB) return;
+  const filteredData = getFilteredDataForChart(config);
+  if (filteredData.length === 0) return;
+  const containerId = "container_" + config.id;
+  let container = document.getElementById(containerId);
+  if (container) container.remove();
+  container = document.createElement("div");
+  container.className = "chart-container";
+  container.id = containerId;
+  container.innerHTML = `
+    <div class="chart-header">
+      <div class="chart-title">${config.title || config.type}</div>
+      <div class="chart-actions">
+        <button title="Export Chart" onclick="exportChart('${config.id}')">Export</button>
+        <button title="Delete Chart" onclick="deleteChart('${config.id}')">Delete</button>
+      </div>
+    </div>
+    <canvas id="${config.id}" class="chart-canvas"></canvas>
+  `;
+  chartsGrid.appendChild(container);
+  const ctx = document.getElementById(config.id).getContext('2d');
+  if (chartInstances[config.id]) chartInstances[config.id].destroy();
+  chartInstances[config.id] = new Chart(ctx, {
+    type: config.type,
+    data: prepareChartData(filteredData, config),
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        title: { display: true, text: config.title || config.type, font: { size: 16, weight: "bold" }},
+        legend: { display: (config.type === "pie" || config.type === "doughnut" || config.type === "polarArea") || !!config.groupByField, position: "bottom" }
+      },
+      scales: (config.type === "pie" || config.type === "doughnut" || config.type === "polarArea") ? {} : {
+        x: { title: { display: true, text: config.xAxisField }},
+        y: { title: { display: true, text: config.yAxisField }, beginAtZero: true }
+      }
+    }
+  });
+}
+function renderCharts() {
+  chartsGrid.innerHTML = "";
+  savedCharts.filter(c => c.database === currentDB).forEach(c => renderChart(c));
+}
+window.exportChart = function(chartId) {
+  const chart = chartInstances[chartId];
+  if (!chart) return;
+  const link = document.createElement("a");
+  link.download = `chart_${chartId}.png`;
+  link.href = chart.toBase64Image();
+  link.click();
+};
+window.deleteChart = async function(chartId) {
+  if (!confirm("Delete this chart?")) return;
+  const idx = savedCharts.findIndex(c => c.id === chartId);
+  if (idx === -1) return;
+  savedCharts.splice(idx, 1);
+  if (chartInstances[chartId]) {
+    chartInstances[chartId].destroy();
+    delete chartInstances[chartId];
+  }
+  const el = document.getElementById("container_" + chartId);
+  if (el) el.remove();
+  await saveAll();
+};
+function getChartConfigFromUI() {
+  const type = chartTypeSel.value;
+  const title = chartTitleInp.value.trim() || "Untitled Chart";
+  const xField = xAxisFieldSel.value;
+  const yField = yAxisFieldSel.value;
+  const groupBy = groupByFieldSel.value;
+  const filterColumn = filterColumnSel.value;
+  const colorScheme = colorSchemeSel.value;
+  const bgColor = bgColorInp.value;
+  if (!yField || (!xField && !groupBy)) {
+    alert("Please select at least a Y-Axis field and an X-Axis or Group By field.");
+    return null;
+  }
+  return {
+    id: null,
+    database: currentDB,
+    type,
+    title,
+    xAxisField: xField,
+    yAxisField: yField,
+    groupByField: groupBy,
+    filterColumn,
+    colorScheme,
+    bgColor
+  };
+}
+filterColumnSel.addEventListener("change", () => {
+  const col = filterColumnSel.value;
+  const host = filterHostDiv;
+  host.innerHTML = "";
+  if (!col) return;
+  const ctype = types[col]?.type || "text";
+  if (ctype === "number") {
+    host.innerHTML = `
+      <label>Min:<input type="number" id="filterMin" style="width:80px"/></label>
+      <label>Max:<input type="number" id="filterMax" style="width:80px"/></label>`;
+  } else if (ctype === "date") {
+    host.innerHTML = `
+      <label>From:<input type="date" id="filterFrom"/></label>
+      <label>To:<input type="date" id="filterTo"/></label>`;
+  } else {
+    const uniqueVals = [...new Set(jsonData.map(r => r[col] || ""))];
+    host.innerHTML = `<label>Value:<select id="filterVal"><option value="">All</option>${uniqueVals.map(v => `<option>${v}</option>`).join('')}</select></label>`;
+  }
+});
+createChartBtn.onclick = async () => {
+  const config = getChartConfigFromUI();
+  if (!config) return;
+  config.id = "chart_" + Date.now();
+  savedCharts.push(config);
+  await saveAll();
+  renderCharts();
+};
+updateChartBtn.onclick = async () => {
+  if (savedCharts.length === 0) {
+    alert("No charts to update.");
+    return;
+  }
+  const config = getChartConfigFromUI();
+  if (!config) return;
+  const lastChart = savedCharts[savedCharts.length - 1];
+  config.id = lastChart.id;
+  config.database = currentDB;
+  savedCharts[savedCharts.length - 1] = config;
+  await saveAll();
+  renderCharts();
+};
+
+// ========== INITIALIZE ON LOAD ==========
+window.addEventListener("load", async () => {
+  loadLocal();
+  await pullFromCloud();
+  await loadCurrentDB();
+});
+async function loadCurrentDB() {
+  const sheet = databases[currentDB];
+  if (!sheet || !Array.isArray(sheet.headers) || sheet.headers.length === 0) {
+    headers = [];
+    types = {};
+    jsonData = [];
+    renderTabs();
+    renderInputs();
+    buildTable();
+    return;
+  }
+  headers = sheet.headers.slice();
+  types = JSON.parse(JSON.stringify(sheet.types));
+  jsonData = sheet.jsonData.slice();
+  renderTabs();
+  renderInputs();
+  buildTable();
+  enableDragDrop();
+  filterTable();
+  populateFormulaFields();
+  populateStatsColumns();
+  populateChartFields();
+  renderCharts();
+}
+// --- Excel-like Formula Input Logic ---
+const excelFormulaForm = document.getElementById("excelFormulaForm");
+const excelFormulaInput = document.getElementById("excelFormulaInput");
+const excelFormulaError = document.getElementById("excelFormulaError");
+
+excelFormulaForm.addEventListener("submit", function(e) {
+  e.preventDefault();
+  excelFormulaError.textContent = "";
+  const formula = excelFormulaInput.value.trim();
+  if (!/^[A-Z]+\s*=/.test(formula)) {
+    excelFormulaError.textContent = "Formula must start with a column letter and '='. Example: C=A+2*B";
+    return;
+  }
+
+  // Parse formula: e.g. C=A+2*B
+  const match = formula.match(/^([A-Z]+)\s*=\s*(.+)$/);
+  if (!match) {
+    excelFormulaError.textContent = "Invalid formula syntax. Example: C=A+2*B";
+    return;
+  }
+  const targetColLetter = match[1];
+  const expr = match[2];
+
+  // Map column letters to header names via current order
+  function getHeaderFromLetter(letter) {
+    let idx = 0;
+    for (let i = 0; i < letter.length; i++)
+      idx = idx * 26 + (letter.charCodeAt(i) - 65 + 1);
+    idx -= 1;
+    if (idx < 0 || idx >= headers.length) return null;
+    return headers[idx];
+  }
+
+  const targetHeader = getHeaderFromLetter(targetColLetter);
+  let createdHeader = false;
+  if (!targetHeader) {
+    // Add a new column at the end, with a default name (suggest a prompt for a nice name)
+    let newHeader = prompt(`Enter header name for new column ${targetColLetter}:`, targetColLetter) || targetColLetter;
+    headers.push(newHeader);
+    databases[currentDB].headers = headers;
+    databases[currentDB].types[newHeader] = { type: "text" };
+    createdHeader = true;
+  }
+
+  // Find all referenced column letters in the expression:
+  const colLettersUsed = Array.from(new Set(expr.match(/[A-Z]+/g) || []));
+  let unknown = null;
+  const colMap = {};
+  colLettersUsed.forEach(ltr => {
+    const h = getHeaderFromLetter(ltr);
+    if (!h) unknown = ltr;
+    else colMap[ltr] = h;
+  });
+
+  if (unknown) {
+    if (createdHeader) {
+      headers.pop();
+      delete databases[currentDB].types[targetColLetter];
+      databases[currentDB].headers = headers;
+    }
+    excelFormulaError.textContent = `Unknown column ID "${unknown}". Please try again.`;
+    return;
+  }
+
+  // For each row, compute the formula and set the result
+  let hadError = false;
+  const targetColHeader = getHeaderFromLetter(targetColLetter) || headers[headers.length-1];
+  jsonData.forEach(row => {
+    let evalExpr = expr;
+    colLettersUsed.forEach(ltr => {
+      const val = row[colMap[ltr]] ?? 0;
+      evalExpr = evalExpr.replace(new RegExp(`\\b${ltr}\\b`, "g"), `(${val})`);
+    });
+    try {
+      let result = eval(evalExpr);
+      row[targetColHeader] = (typeof result === "number" && !isFinite(result)) ? "" : result;
+    } catch {
+      hadError = true;
+      row[targetColHeader] = "#ERR";
+    }
+  });
+
+  databases[currentDB].jsonData = jsonData;
+  if (createdHeader) {
+    databases[currentDB].headers = headers;
+  }
+  buildTable();
+  enableDragDrop();
+  populateFormulaFields();
+  populateStatsColumns();
+  populateChartFields();
+  saveAll().then(() => {
+    if (hadError) {
+      excelFormulaError.textContent = "Some rows produced errors (#ERR). Check your formula.";
+    } else {
+      excelFormulaError.textContent = "Formula applied to all rows!";
+      setTimeout(() => { excelFormulaError.textContent = ""; }, 2000);
+    }
+  });
+});
+
+window.addEventListener("beforeunload", async () => {
+  await saveAll();
+});
+</script>
+</body>
+</html>
